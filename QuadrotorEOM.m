@@ -45,16 +45,18 @@ Nc = ControlVect(4);
 
 
 %% Translational newton's second law
-udot_E = (r.*v - q.*w) + g.*(-sin(theta));
-vdot_E = (p.*w - r.*u) + g.*(cos(theta)*sin(phi));
-wdot_E = (q.*u - p.*v) + g.*(cos(theta)*cos(phi)) + (1/m)*(Zc);
+RWindVec = [u v w]; %Used for drag calculations
+udot_E = (r.*v - q.*w) + g.*(-sin(theta)) + (1/m).*(-nu.*norm(RWindVec).*u); 
+vdot_E = (p.*w - r.*u) + g.*(cos(theta)*sin(phi)) + (1/m).*(-nu.*norm(RWindVec).*v);
+wdot_E = (q.*u - p.*v) + g.*(cos(theta)*cos(phi)) + (1/m).*(-nu.*norm(RWindVec).*w) + (1/m)*(Zc);
 
 
 %% Rotational newton's second law
+rotationVec = [p q r]; %Again used for drag
 
-pdot = ((Iy - Iz)/Ix).*q.*r + (1/Ix).*Lc;
-qdot = ((Iz - Ix)/Iy).*p.*r + (1/Iy).*Mc;
-rdot = ((Ix - Iy)/Iz).*p.*q + (1/Iz).*Nc;
+pdot = ((Iy - Iz)/Ix).*q.*r + (1/Ix).*Lc + (1/Ix).*-mu.*norm(rotationVec).*p;
+qdot = ((Iz - Ix)/Iy).*p.*r + (1/Iy).*Mc + (1/Iy).*-mu.*norm(rotationVec).*q;
+rdot = ((Ix - Iy)/Iz).*p.*q + (1/Iz).*Nc + (1/Iz).*-mu.*norm(rotationVec).*r;
 
 
 %% DCM stuff
