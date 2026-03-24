@@ -19,7 +19,7 @@ function var_dot = QuadrotorEOM_Linearized(t, var, g, m, I, deltaFc, deltaGc)
     Iz = I(3,3);
 
     %Control pertubations
-    deltaXc = deltaGc(1);
+    deltaXc = deltaFc(1);
     deltaYc = deltaFc(2);
     deltaZc = deltaFc(3);
     deltaLc = deltaGc(1);
