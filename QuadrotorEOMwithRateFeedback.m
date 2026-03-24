@@ -40,19 +40,11 @@ Qeuler = [1 sin(phi)*tan(theta) cos(phi)*tan(theta); ...
 %% CHANGED: Control forces and moments;
 [Fc, Gc] = RotationDerivativeFeedback(var, m, g);
 
-d = 0.060;
-km = 0.0024;
-motor_forces = ComputeMotorForces(Fc, Gc, d, km);
-
-droot2 = d/sqrt(2);
-%control equation
-ControlVect = [-1 -1 -1 -1; -(droot2)  -(droot2) droot2 droot2; droot2 -(droot2) -(droot2) droot2; km -km km -km] * motor_forces';
-
 %Split variables for ease of analysis
-Zc = ControlVect(1);
-Lc = ControlVect(2);
-Mc = ControlVect(3);
-Nc = ControlVect(4);
+Zc = Fc(3);
+Lc = Gc(1);
+Mc = Gc(2);
+Nc = Gc(3);
 
 
 
