@@ -5,7 +5,7 @@ function [Fc, Gc] = RotationDerivativeFeedback(var, m, g)
 % outputs: control force vec Fc, control moment vector Gc
 
 %force
-Fc = [0;0;m*g];
+Fc = [0;0;-m*g];
 
 %moments
 gain = 0.004; %Nm/(rad/s)
