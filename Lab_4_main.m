@@ -174,22 +174,18 @@ end
 
 % This is the run function
 
+time = linspace(0,10,100);
 
-% clear
-% clc
-% 
-% time = linspace(0,10,100);
-% 
-% aircraft_state_array = zeros(12,length(time));
-% control_input_array = zeros(4,length(time));
-% 
-% fig = [1 2 3 4 5 6];
-% 
-% PlotAircraftSim(time, aircraft_state_array, control_input_array, fig,'b-')
-% 
+aircraft_state_array = zeros(12,length(time));
+control_input_array = zeros(4,length(time));
+
+fig = [1 2 3 4 5 6];
+
+PlotAircraftSim(time, aircraft_state_array, control_input_array, fig,'b-')
+
 %% Task 1.2
 % Force of gravity divided by num of motors
-p1_2.motor_forces = const.m*const.g/4*[1;1;1;1];
+p1_2.motor_forces = (const.m)*(const.g)/4*[1;1;1;1];
 
 % 10 sec time span
 p1_2.tspan = [0 10];
@@ -379,30 +375,266 @@ PlotAircraftSim(p2_2.t', p2_2.var', p2_1.control_input_array, fig,'r-')
 %% Task 2.3
 function [Fc, Gc] = RotationDerivativeFeedback(var, m, g)
 
+% inputs: 12x1 state var, a/c mass m, gravity g
+% outputs: control force vec Fc, control moment vector Gc
+
+%force
+Fc = [0;0;-m*g];
+
+%moments
+gain = 0.004; %Nm/(rad/s)
+Gc = -1 .* gain .* var(10:12);
+
 end
 %% Task 2.4
 function motor_forces = ComputeMotorForces(Fc, Gc, d, km)
 
+X_c = Fc(1); % Likely to stay 0 the majority of the time
+Y_c = Fc(2); % ^Ditto
+Z_c = Fc(3);
+
+L_c = Gc(1);
+M_c = Gc(2);
+N_c = Gc(3);
+
+
+f_1 = -1 * (Z_c + L_c + M_c + N_c);
+f_2 = (d / sqrt(2)) * ((-Z_c - L_c) + (M_c + N_c));
+f_3 = (d / sqrt(2)) * ((-L_c - M_c) + (Z_c + N_c));
+f_4 = (km) * ((-L_c - N_c) + (Z_c + M_c));
+
+
+
+motor_forces = [f_1, f_2, f_3, f_4];
+
 end
 %% Task 2.5
+
 function var_dot = QuadrotorEOMwithRateFeedback(t, var, g, m, I, nu, mu)
+
+% Task 2.5
+% inputs: time t, 12x1 state var, a/c mass m, gravity g, 3x3 inertia matrix
+% I, nu, mu
+% outputs: state dot
+
+%% Extracting variables from state vector
+x = var(1);
+y = var(2);
+z = var(3);
+phi = var(4);
+theta = var(5);
+psi = var(6);
+u = var(7);
+v = var(8);
+w = var(9);
+p = var(10);
+q = var(11);
+r = var(12);
+
+%% assigning inertia values from I matrix
+Ix = I(1,1);
+Iy = I(2,2);
+Iz = I(3,3);
+
+%% Creating rotation matrices
+%Standard dcm
+
+Q = [cos(theta)*cos(psi) (sin(phi)*sin(theta)*cos(psi) - cos(phi)*sin(psi)) (cos(phi)*sin(theta)*cos(psi)+sin(phi)*sin(psi)); ...
+cos(theta)*sin(psi) (sin(phi)*sin(theta)*sin(psi) + cos(phi)*cos(psi)) (cos(phi)*sin(theta)*sin(psi)-sin(phi)*cos(psi)); ...
+-sin(theta) sin(phi)*cos(theta) cos(phi)*cos(theta)];
+
+%Euler rotationa angle matrix
+
+Qeuler = [1 sin(phi)*tan(theta) cos(phi)*tan(theta); ...
+          0 cos(phi) -sin(phi); ... 
+          0 sin(phi)*sec(theta) cos(phi)*cos(theta)];
+
+%% CHANGED: Control forces and moments;
+[Fc, Gc] = RotationDerivativeFeedback(var, m, g);
+
+%Split variables for ease of analysis
+Zc = Fc(3);
+Lc = Gc(1);
+Mc = Gc(2);
+Nc = Gc(3);
+
+
+
+%% Translational newton's second law
+RWindVec = [u v w]; %Used for drag calculations
+udot_E = (r.*v - q.*w) + g.*(-sin(theta)) + (1/m).*(-nu.*norm(RWindVec).*u); 
+vdot_E = (p.*w - r.*u) + g.*(cos(theta)*sin(phi)) + (1/m).*(-nu.*norm(RWindVec).*v);
+wdot_E = (q.*u - p.*v) + g.*(cos(theta)*cos(phi)) + (1/m).*(-nu.*norm(RWindVec).*w) + (1/m)*(Zc);
+
+
+%% Rotational newton's second law
+rotationVec = [p q r]; %Again used for drag
+
+pdot = ((Iy - Iz)/Ix).*q.*r + (1/Ix).*Lc + (1/Ix).*-mu.*norm(rotationVec).*p;
+qdot = ((Iz - Ix)/Iy).*p.*r + (1/Iy).*Mc + (1/Iy).*-mu.*norm(rotationVec).*q;
+rdot = ((Ix - Iy)/Iz).*p.*q + (1/Iz).*Nc + (1/Iz).*-mu.*norm(rotationVec).*r;
+
+
+%% DCM stuff
+
+InertialAccel = Q*[u;v;w];
+
+ax_E = InertialAccel(1);
+ay_E = InertialAccel(2);
+az_E = InertialAccel(3);
+
+InertialRollAccel = Qeuler*[p;q;r];
+
+phidot = InertialRollAccel(1);
+thetadot = InertialRollAccel(2);
+psidot = InertialRollAccel(3);
+
+
+var_dot = [ax_E,ay_E,az_E,phidot,thetadot,psidot,udot_E,vdot_E,wdot_E,pdot,qdot,rdot]';
+
+
 
 end
 
+
 %% Task 3.1
+close all;
+function [lat_gains, long_gains] = Task31_gains (I)
+
+%MOI
+I_x = I(1,1); % kg*m^2 
+I_y = I(2,2); % kg*m^2    
+
+%time constants
+tau1 = 0.5;
+tau2 = 0.05;
+
+%sigma
+sigma1 = -1/tau1;
+sigma2 = -1/tau2;
+
+%set them as eigenvalues (aka roots)
+roots = [sigma1 sigma2];
+coeffs = poly(roots);
+
+%lateral
+k1_lat = coeffs(2)*I_x; %derivative gain
+k2_lat = coeffs(3)*I_x; %proportional gain
+lat_gains = [k1_lat k2_lat];
+
+%longitudinal
+k1_long = coeffs(2)*I_y;
+k2_long = coeffs(3)*I_y;
+long_gains = [k1_long k2_long];
+
+
+
+end
+
+
 
 %% Task 3.2
-function [Fc, Gc] = InnerLoopFeedback(var)
+function [Fc, Gc] = InnerLoopFeedback(var,lat_gains,long_gains,m,g)
+
+%force
+Fc = [0;0;-m*g];
+
+%moments
+gain = 0.004; %Nm/(rad/s)
+deltaLc = -lat_gains(1)*var(10) -lat_gains(2)*var(4);
+deltaMc = -long_gains(1)*var(11) -long_gains(2)*var(5);
+Gc = [deltaLc;deltaMc;-gain*var(12)];
 
 end
 %% Task 3.3
 
+tspan = [0 10];
+
+%various initial conditions
+% [ x ;  y ;  z ; phi; theta; psi;  u ;  v ;  w ;  p ;  q ;  r ]
+p33_y0_1 = [0 0 0 deg2rad(5) 0 0 0 0 0 0 0 0]';
+p33_y0_2 = [0 0 0 0 deg2rad(5) 0 0 0 0 0 0 0]';  
+p33_y0_3 = [0 0 0 0 0 0 0 0 0 0.1 0 0]';
+p33_y0_4 = [0 0 0 0 0 0 0 0 0 0 0.1 0]';
+
+p33_y0 = [p33_y0_1, p33_y0_2, p33_y0_3, p33_y0_4];
+
+[lat_gains, long_gains] = Task31_gains(const.I);
+
+for j = 1:size(p33_y0, 2)
+    clear Fc Gc motor_forces
+    [t, var] = ode45(@(t,v) QuadrotorEOMlinearizedCLGains(t, v, const.g, const.m, ...
+        const.I, const.nu, const.mu), tspan, p33_y0(:,j));
+    for i = 1:length(t)
+        [Fc(i,:), Gc(i,:)] = InnerLoopFeedback(var(i,:)', lat_gains, long_gains, const.m, const.g);
+        motor_forces(i,:) = ComputeMotorForces(Fc(i,:)', Gc(i,:)', const.d, const.km)';
+    end
+    control_input_array = [Fc(:,3)'; Gc(:,1)'; Gc(:,2)'; Gc(:,3)'];
+    PlotAircraftSim(t', var', control_input_array, [1 2 3 4 5 6] + (j-1)*6, 'b-')
+
+    figure((j-1)*6 + 6)  % grab the 6th figure for this case
+    ah = gca;
+    ah.Children(2).DisplayName = 'Start';  % green dot
+    ah.Children(1).DisplayName = 'End';    % red dot
+    legend
+    
+    figure(24 + (j-1)*2 + 1)
+    subplot(311)
+    plot(t, Fc(:,1)); hold on
+    ylabel('X (N)')
+    xlabel('Time (s)')
+    title('Control Forces')
+    subplot(312)
+    plot(t, Fc(:,2)); hold on
+    ylabel('Y (N)')
+    xlabel('Time (s)')
+    subplot(313)
+    plot(t, Fc(:,3)); hold on
+    ylabel('Z (N)')
+    xlabel('Time (s)')
+
+    figure(24 + (j-1)*2 + 2)
+    subplot(311)
+    plot(t, Gc(:,1)); hold on
+    ylabel('X (Nm)')
+    xlabel('Time (s)')
+    title('Control Moments')
+    subplot(312)
+    plot(t, Gc(:,2)); hold on
+    ylabel('Y (Nm)')
+    xlabel('Time (s)')
+    subplot(313)
+    plot(t, Gc(:,3)); hold on
+    ylabel('Z (Nm)')
+    xlabel('Time (s)')
+
+
+end
+
+% save plots
+for f = 1:32
+    figure(f)
+    exportgraphics(gcf, sprintf('Task_33_figure_%d.png', f), 'Resolution', 300)
+end
+
 %% Task 3.4
 
 %% Task 3.5
+%outermost loop: velocity reference
+%locus is real on x axis and imaginary on y
+%slide 24
+%vary k3 over a range of values
+%run eig command and root locus plot 
+%time constant can't be more than 1.25s so that's constraint
+
+
 
 %% Task 3.6
 function [Fc, Gc] = VelocityReferenceFeedback(t, var)
 
 end
 %% Task 3.7
+%repeat 3.1 but with k3
+
+
+
