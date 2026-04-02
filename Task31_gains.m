@@ -1,8 +1,7 @@
-function [lat_gains, long_gains] = Task31_gains ()
+function [lat_gains, long_gains] = Task31_gains (I)
 
-%MOI
-I_x = 5.8e-5; % kg*m^2 
-I_y = 7.2e-5; % kg*m^2    
+I_x = I(1,1);
+I_y = I(2,2);
 
 %time constants
 tau1 = 0.5;
