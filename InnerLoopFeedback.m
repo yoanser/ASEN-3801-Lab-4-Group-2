@@ -1,4 +1,4 @@
-function [Fc, Gc] = InnerLoopFeedback(var,lat_gains,long_gains)
+function [Fc, Gc] = InnerLoopFeedback(var,lat_gains,long_gains,m,g)
 
 %force
 Fc = [0;0;-m*g];
