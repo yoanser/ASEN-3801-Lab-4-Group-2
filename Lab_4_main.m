@@ -618,7 +618,66 @@ for f = 1:32
 end
 
 %% Task 3.4
+% Used to label graphs
+colcontrol.Color = 'b';
+colcontrol.LineStyle='--';
+colcontrol.DisplayName = 'Controlled Drone';
 
+for j = 1:size(p34_y0, 2)
+    clear Fc Gc motor_forces
+    [t, var] = ode45(@(t,v) QuadrotorEOM34_Unlinearized(t, v, const.g, const.m, ...
+        const.I, const.nu, const.mu), tspan, p34_y0(:,j));
+    for i = 1:length(t)
+        [Fc(i,:), Gc(i,:)] = InnerLoopFeedback(var(i,:)', lat_gains, long_gains, const.m, const.g);
+        motor_forces(i,:) = ComputeMotorForces(Fc(i,:)', Gc(i,:)', const.d, const.km)';
+    end
+    control_input_array = [Fc(:,3)'; Gc(:,1)'; Gc(:,2)'; Gc(:,3)'];
+    PlotAircraftSim(t', var', control_input_array, [1 2 3 4 5 6] + (j-1)*6, colcontrol)
+
+    figure((j-1)*6 + 6)  % grab the 6th figure for this case
+    ah = gca;
+    ah.Children(2).DisplayName = 'Start';  % green dot
+    ah.Children(1).DisplayName = 'End';    % red dot
+    legend
+    
+    figure(24 + (j-1)*2 + 1)
+    subplot(311)
+    plot(t, Fc(:,1),'--b'); hold on
+    ylabel('X (N)')
+    xlabel('Time (s)')
+    title('Control Forces')
+    subplot(312)
+    plot(t, Fc(:,2),'--b'); hold on
+    ylabel('Y (N)')
+    xlabel('Time (s)')
+    subplot(313)
+    plot(t, Fc(:,3),'--b'); hold on
+    ylabel('Z (N)')
+    xlabel('Time (s)')
+
+    figure(24 + (j-1)*2 + 2)
+    subplot(311)
+    plot(t, Gc(:,1),'--b'); hold on
+    ylabel('X (Nm)')
+    xlabel('Time (s)')
+    title('Control Moments')
+    subplot(312)
+    plot(t, Gc(:,2),'--b'); hold on
+    ylabel('Y (Nm)')
+    xlabel('Time (s)')
+    subplot(313)
+    plot(t, Gc(:,3),'--b'); hold on
+    ylabel('Z (Nm)')
+    xlabel('Time (s)')
+
+
+end
+
+% save plots
+for f = 1:32
+    figure(f)
+    exportgraphics(gcf, sprintf('Task_34_figure_%d.png', f), 'Resolution', 300)
+end
 %% Task 3.5
 %outermost loop: velocity reference
 %locus is real on x axis and imaginary on y
