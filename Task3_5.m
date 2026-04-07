@@ -56,7 +56,7 @@ for i = 1:length(p3_5.k3_vals)
     lat_eigenvalues(:,i) = eig(A);
 end
 
-figure
+figure('theme', "light")
 hold on
 grid on
 
@@ -81,8 +81,7 @@ for i = 1:length(lat_eigenvalues)
     end
 end
 
-scatter(real(lat_valid_eig), imag(lat_valid_eig)); %, "ZData", Valid_k3);
-
+scatter(real(lat_valid_eig), imag(lat_valid_eig));
 
 %% 3.5 - Longitudinal Gain K3
 % sweep
@@ -97,7 +96,7 @@ for i = 1:length(p3_5.k3_vals)
     long_eigenvalues(:,i) = eig(A);
 end
 
-figure
+figure('theme', "light")
 hold on
 grid on
 
@@ -122,4 +121,4 @@ for i = 1:length(long_eigenvalues)
     end
 end
 
-scatter(real(long_valid_eig), imag(long_valid_eig)); %, "ZData", Valid_k3);
+scatter(real(long_valid_eig), imag(long_valid_eig));
